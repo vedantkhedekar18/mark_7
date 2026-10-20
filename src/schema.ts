@@ -1,3 +1,5 @@
+// Database schema (MySQL 8 / MariaDB 10.6+). Kept in TypeScript so serverless bundlers always include it.
+export const SCHEMA_SQL = `
 -- Transfer Ledger schema (MySQL 8 / MariaDB 10.6+, InnoDB)
 -- All money is stored as signed integer paise (BIGINT). Never floats.
 
@@ -59,3 +61,4 @@ CREATE TABLE IF NOT EXISTS outbox (
   published_at TIMESTAMP(3) NULL,
   KEY idx_outbox_unpublished (published_at, id)
 ) ENGINE=InnoDB;
+`;

@@ -212,7 +212,8 @@ $("recBtn").onclick = async () => {
 };
 
 const seen = new Set();
-const socket = io();
+// WebSocket transport only: required on Vercel, and fine everywhere else. Socket.IO reconnects automatically.
+const socket = io({ transports: ["websocket"] });
 socket.on("ledger-event", ({ type, payload }) => {
   if (seen.has(payload.id)) return; // outbox delivery is at-least-once
   seen.add(payload.id);

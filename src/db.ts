@@ -1,6 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import mysql, { Pool, PoolConnection } from "mysql2/promise";
+import { SCHEMA_SQL } from "./schema";
 
 export type Db = Pool;
 
@@ -29,13 +28,9 @@ export function createPool(url = process.env.DATABASE_URL): Pool {
   });
 }
 
-/** Applies schema.sql. Every statement is CREATE TABLE IF NOT EXISTS, so it is safe to re-run. */
+/** Applies the schema. Every statement is CREATE TABLE IF NOT EXISTS, so it is safe to re-run. */
 export async function migrate(db: Pool): Promise<void> {
-  const file = [path.join(__dirname, "schema.sql"), path.join(__dirname, "..", "src", "schema.sql")]
-    .find((f) => fs.existsSync(f));
-  if (!file) throw new Error("schema.sql not found");
-  const statements = fs
-    .readFileSync(file, "utf8")
+  const statements = SCHEMA_SQL
     .split("\n")
     .filter((l) => !l.trim().startsWith("--"))
     .join("\n")

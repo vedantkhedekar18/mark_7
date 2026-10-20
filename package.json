@@ -25,6 +25,7 @@
     "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.1",
     "fast-check": "^4.10.2",
+    "socket.io-client": "^4.8.4",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",

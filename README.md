@@ -60,11 +60,21 @@ TEST_DATABASE_URL=mysql://user:pass@127.0.0.1:3306/ledger_test npm test
 
 Tests run against a real MySQL database, not mocks, because the guarantees come from InnoDB locking and constraints.
 
-## Deploy (Render + hosted MySQL)
+## Deploy
 
-1. Create a MySQL database (for example an Aiven free MySQL service) and copy its connection URI and CA certificate.
-2. On Render: **New → Blueprint**, pick this repo (it reads `render.yaml`), then set `DATABASE_URL` and `DB_CA_CERT`.
-3. The schema is created automatically on first start.
+Both options need a hosted MySQL database first, for example an Aiven free MySQL service. Copy its **Service URI** and **CA certificate**. The schema is created automatically on first request.
+
+Environment variables: `DATABASE_URL` (the Service URI), `DB_SSL=true`, `DB_CA_CERT` (the CA certificate PEM text), and optionally `DB_POOL_SIZE` (default 20; use 5 on Vercel).
+
+**Vercel:** import the repo, set **Framework Preset: Other**, add the environment variables, then deploy. `vercel.json` routes every path to `api/server.ts`, which runs the whole app as one Vercel Function. Socket.IO runs on Vercel's WebSocket support (beta), using the WebSocket transport only.
+
+**Render:** **New → Blueprint**, pick this repo (it reads `render.yaml`), and fill in the variables.
+
+### Vercel caveats (why Render is the closer fit)
+- **The live feed is per instance.** A WebSocket stays pinned to one function instance, and the outbox worker on each instance only pushes to its own clients. At demo traffic there is usually a single instance; at scale this would need Redis pub/sub.
+- **Connections close at the function's max duration.** The dashboard's Socket.IO client reconnects automatically.
+- **The outbox worker only runs while an instance is alive.** Money movement is unaffected, because events are durable in the outbox table and get published on the next run.
+- None of this affects ledger correctness, which lives entirely in MySQL transactions.
 
 ## Design notes and known limits
 

@@ -56,10 +56,15 @@ function getLedgerApp(): Promise<express.Express> {
 
 const front = express();
 
-const publicDir = [path.join(__dirname, "..", "public"), path.join(process.cwd(), "public")].find((d) =>
-  fs.existsSync(path.join(d, "index.html")),
-);
-if (publicDir) front.use(express.static(publicDir));
+if (process.env.VERCEL) {
+  // On Vercel, public/ is served by the CDN, not by this function.
+  front.get("/", (_req, res) => res.redirect(302, "/index.html"));
+} else {
+  const publicDir = [path.join(__dirname, "..", "public"), path.join(process.cwd(), "public")].find((d) =>
+    fs.existsSync(path.join(d, "index.html")),
+  );
+  if (publicDir) front.use(express.static(publicDir));
+}
 
 front.get("/health", async (_req, res) => {
   try {

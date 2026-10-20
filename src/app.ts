@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import express, { NextFunction, Request, Response } from "express";
 import type { Pool, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import {
@@ -50,11 +48,6 @@ function send(res: Response, r: OpResult) {
 export function createApp(db: Pool, fundingAccountId: number) {
   const app = express();
   app.use(express.json({ limit: "10kb" }));
-  // Works both locally (dist/../public) and in serverless bundles (cwd/public).
-  const publicDir = [path.join(__dirname, "..", "public"), path.join(process.cwd(), "public")].find((d) =>
-    fs.existsSync(path.join(d, "index.html")),
-  );
-  if (publicDir) app.use(express.static(publicDir));
 
   app.get("/health", wrap(async (_req, res) => {
     await db.query("SELECT 1");

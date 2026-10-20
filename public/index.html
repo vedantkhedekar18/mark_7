@@ -46,6 +46,7 @@
   <h1>Transfer Ledger</h1>
   <p>A double-entry money-transfer service. Every transfer is idempotent, locked against concurrent overspending, and provable by reconciliation. Amounts are stored as integer paise.</p>
 </header>
+<div id="banner" style="display:none;max-width:1100px;margin:8px auto 0;padding:10px 14px;border:1px solid var(--bad);border-radius:8px;color:var(--bad)"></div>
 <main>
   <section class="wide">
     <h2>Accounts</h2>
@@ -126,7 +127,14 @@ function fill(select, list, keep) {
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 async function loadAccounts() {
-  const { body } = await api("/api/accounts");
+  const { status, body } = await api("/api/accounts");
+  const banner = $("banner");
+  if (status === 503) {
+    banner.style.display = "block";
+    banner.textContent = "The ledger database is not reachable yet: " + (body.message || "unknown error") + ". Check the DATABASE_URL, DB_SSL and DB_CA_CERT settings, then redeploy.";
+    return;
+  }
+  banner.style.display = "none";
   accounts = body.accounts || [];
   $("accounts").innerHTML = accounts.map((a) =>
     `<tr><td>${a.id}</td><td>${escapeHtml(a.name)} ${a.isSystem ? '<span class="tag">system</span>' : ""}</td><td class="num">${rupees(a.balance)}</td></tr>`).join("");

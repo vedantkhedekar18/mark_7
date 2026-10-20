@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfer Ledger</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #16181d; --muted: #5f6672; --line: #e2e5ea;
+    --accent: #1f5eff; --ok: #0f7b4a; --bad: #b42318; --code: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --panel: #171a21; --text: #e8eaee; --muted: #9aa1ad; --line: #2a2f3a;
+            --accent: #6b93ff; --ok: #4cc38a; --bad: #ff7a6b; --code: #1f232c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0; font-size: 22px; }
+  header p { margin: 4px 0 0; color: var(--muted); max-width: 760px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { margin: 0 0 4px; font-size: 15px; }
+  .hint { color: var(--muted); margin: 0 0 10px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.num, th.num { text-align: right; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 8px; }
+  label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); min-width: 0; }
+  button { font: inherit; padding: 7px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  pre, .out { background: var(--code); border-radius: 6px; padding: 8px 10px; margin: 8px 0 0; font: 12px/1.45 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 10px; padding: 0 6px; }
+  #feed { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
+  #feed li { padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Transfer Ledger</h1>
+  <p>A double-entry money-transfer service. Every transfer is idempotent, locked against concurrent overspending, and provable by reconciliation. Amounts are stored as integer paise.</p>
+</header>
+<main>
+  <section class="wide">
+    <h2>Accounts</h2>
+    <div class="row">
+      <label>New account name <input id="newName" placeholder="e.g. Asha" maxlength="100"></label>
+      <button id="createBtn">Create account</button>
+      <label>Deposit to <select id="depAcc"></select></label>
+      <label>Amount (₹) <input id="depAmt" type="number" min="0.01" step="0.01" value="100"></label>
+      <button id="depBtn">Deposit</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th class="num">Balance</th></tr></thead>
+      <tbody id="accounts"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Transfer</h2>
+    <p class="hint">Each click uses a fresh Idempotency-Key. "Retry same key" resends the last request exactly, as a client would after a timeout.</p>
+    <div class="row">
+      <label>From <select id="fromAcc"></select></label>
+      <label>To <select id="toAcc"></select></label>
+      <label>Amount (₹) <input id="trAmt" type="number" min="0.01" step="0.01" value="10"></label>
+    </div>
+    <div class="row">
+      <button id="trBtn">Send transfer</button>
+      <button id="retryBtn" class="ghost" disabled>Retry same key</button>
+    </div>
+    <div id="trOut" class="out">No transfer sent yet.</div>
+  </section>
+
+  <section>
+    <h2>Stress demos</h2>
+    <p class="hint">Fire many requests at the same time and watch the ledger stay correct.</p>
+    <div class="row">
+      <label>Parallel requests <input id="n" type="number" min="2" max="200" value="50"></label>
+      <button id="raceBtn">Race: N × ₹1 from "From" to "To"</button>
+    </div>
+    <div class="row">
+      <button id="stormBtn" class="ghost">Retry storm: N × same key</button>
+    </div>
+    <div id="demoOut" class="out">Pick From/To in the Transfer panel, then run a demo.</div>
+  </section>
+
+  <section>
+    <h2>Reconciliation</h2>
+    <p class="hint">Recomputes every balance from its postings, checks every entry sums to zero, and checks all balances sum to zero.</p>
+    <button id="recBtn">Run reconciliation</button>
+    <div id="recOut" class="out">Not run yet.</div>
+  </section>
+
+  <section>
+    <h2>Live journal <span class="tag">via transactional outbox + Socket.io</span></h2>
+    <ul id="feed"></ul>
+  </section>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const rupees = (p) => "₹" + (p / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const toPaise = (v) => Math.round(Number(v) * 100);
+const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+let accounts = [];
+let lastTransfer = null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
+  const body = await res.json().catch(() => ({}));
+  return { status: res.status, replayed: res.headers.get("Idempotent-Replayed") === "true", body };
+}
+
+function fill(select, list, keep) {
+  const prev = keep ? select.value : null;
+  select.innerHTML = list.map((a) => `<option value="${a.id}">${a.id} · ${escapeHtml(a.name)}</option>`).join("");
+  if (prev && list.some((a) => String(a.id) === prev)) select.value = prev;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+async function loadAccounts() {
+  const { body } = await api("/api/accounts");
+  accounts = body.accounts || [];
+  $("accounts").innerHTML = accounts.map((a) =>
+    `<tr><td>${a.id}</td><td>${escapeHtml(a.name)} ${a.isSystem ? '<span class="tag">system</span>' : ""}</td><td class="num">${rupees(a.balance)}</td></tr>`).join("");
+  const users = accounts.filter((a) => !a.isSystem);
+  fill($("depAcc"), users, true);
+  fill($("fromAcc"), users, true);
+  fill($("toAcc"), users, true);
+  if (users.length > 1 && $("fromAcc").value === $("toAcc").value) $("toAcc").selectedIndex = 1;
+}
+
+function show(el, r) {
+  el.innerHTML = `<span class="${r.status < 300 ? "ok" : "bad"}">HTTP ${r.status}${r.replayed ? " · replayed (no money moved)" : ""}</span>\n` +
+    escapeHtml(JSON.stringify(r.body, null, 2));
+}
+
+$("createBtn").onclick = async () => {
+  const name = $("newName").value.trim();
+  if (!name) return;
+  await api("/api/accounts", { method: "POST", body: JSON.stringify({ name }) });
+  $("newName").value = "";
+  loadAccounts();
+};
+
+$("depBtn").onclick = async () => {
+  const r = await api("/api/deposits", { method: "POST", headers: { "Idempotency-Key": newKey() },
+    body: JSON.stringify({ accountId: Number($("depAcc").value), amount: toPaise($("depAmt").value) }) });
+  if (r.status >= 300) alert(JSON.stringify(r.body));
+  loadAccounts();
+};
+
+async function sendTransfer(t) {
+  const r = await api("/api/transfers", { method: "POST", headers: { "Idempotency-Key": t.key }, body: JSON.stringify(t.body) });
+  show($("trOut"), r);
+  loadAccounts();
+}
+$("trBtn").onclick = () => {
+  lastTransfer = { key: newKey(), body: { fromAccountId: Number($("fromAcc").value), toAccountId: Number($("toAcc").value), amount: toPaise($("trAmt").value) } };
+  $("retryBtn").disabled = false;
+  sendTransfer(lastTransfer);
+};
+$("retryBtn").onclick = () => lastTransfer && sendTransfer(lastTransfer);
+
+function tally(results) {
+  const t = {};
+  for (const r of results) {
+    const k = r.replayed ? `${r.status} (replayed)` : `${r.status}${r.body.error ? " " + r.body.error : ""}`;
+    t[k] = (t[k] || 0) + 1;
+  }
+  return Object.entries(t).map(([k, v]) => `  ${k}: ${v}`).join("\n");
+}
+
+$("raceBtn").onclick = async () => {
+  const n = Math.min(Math.max(Number($("n").value) || 50, 2), 200);
+  const from = Number($("fromAcc").value), to = Number($("toAcc").value);
+  const before = accounts.find((a) => a.id === from)?.balance ?? 0;
+  $("demoOut").textContent = `Sending ${n} parallel ₹1 transfers…`;
+  const t0 = performance.now();
+  const results = await Promise.all(Array.from({ length: n }, () =>
+    api("/api/transfers", { method: "POST", headers: { "Idempotency-Key": newKey() }, body: JSON.stringify({ fromAccountId: from, toAccountId: to, amount: 100 }) })));
+  const ms = Math.round(performance.now() - t0);
+  await loadAccounts();
+  const after = accounts.find((a) => a.id === from)?.balance ?? 0;
+  const ok = results.filter((r) => r.status === 201).length;
+  $("demoOut").innerHTML = escapeHtml(`Race: ${n} requests in ${ms} ms\n${tally(results)}\n\nFrom balance: ${rupees(before)} → ${rupees(after)}\n`) +
+    (after >= 0 && before - after === ok * 100 ? '<span class="ok">✓ No overdraft, every success debited exactly once</span>' : '<span class="bad">✗ Unexpected result</span>');
+};
+
+$("stormBtn").onclick = async () => {
+  const n = Math.min(Math.max(Number($("n").value) || 50, 2), 200);
+  const key = newKey();
+  const body = JSON.stringify({ fromAccountId: Number($("fromAcc").value), toAccountId: Number($("toAcc").value), amount: 100 });
+  $("demoOut").textContent = `Sending the same request ${n} times at once…`;
+  const results = await Promise.all(Array.from({ length: n }, () => api("/api/transfers", { method: "POST", headers: { "Idempotency-Key": key }, body })));
+  await loadAccounts();
+  const ids = new Set(results.map((r) => r.body?.entry?.id).filter(Boolean));
+  $("demoOut").innerHTML = escapeHtml(`Retry storm: ${n} requests, one key\n${tally(results)}\nDistinct journal entries created: ${ids.size}\n`) +
+    (ids.size <= 1 ? '<span class="ok">✓ Money moved at most once</span>' : '<span class="bad">✗ Duplicate entries</span>');
+};
+
+$("recBtn").onclick = async () => {
+  const r = await api("/api/reconciliation");
+  $("recOut").innerHTML = `<span class="${r.body.ok ? "ok" : "bad"}">${r.body.ok ? "✓ Ledger reconciles" : "✗ Mismatch found"}</span>\n` + escapeHtml(JSON.stringify(r.body, null, 2));
+};
+
+const seen = new Set();
+const socket = io();
+socket.on("ledger-event", ({ type, payload }) => {
+  if (seen.has(payload.id)) return; // outbox delivery is at-least-once
+  seen.add(payload.id);
+  const lines = payload.postings.map((p) => `#${p.accountId} ${p.amount > 0 ? "+" : ""}${rupees(p.amount)}`).join(", ");
+  const li = document.createElement("li");
+  li.innerHTML = `<b>Entry ${payload.id}</b> <span class="tag">${escapeHtml(payload.kind)}</span> ${escapeHtml(lines)}`;
+  $("feed").prepend(li);
+  while ($("feed").children.length > 100) $("feed").lastChild.remove();
+});
+
+loadAccounts();
+</script>
+</body>
+</html>

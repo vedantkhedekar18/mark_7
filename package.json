@@ -1,0 +1,37 @@
+{
+  "name": "transfer-ledger",
+  "version": "0.1.0",
+  "description": "Double-entry money-transfer ledger with idempotency keys, row locking and reconciliation (Node.js, TypeScript, MySQL)",
+  "main": "dist/server.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "vitest run",
+    "bench": "tsx scripts/bench.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.22.3",
+    "mysql2": "^3.24.6",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.25",
+    "@types/node": "^26.6.5",
+    "@types/supertest": "^7.2.1",
+    "fast-check": "^4.10.2",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  }
+}

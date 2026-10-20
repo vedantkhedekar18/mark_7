@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: transfer-ledger
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL        # mysql://user:password@host:port/defaultdb
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: DB_CA_CERT          # paste the provider's CA certificate (PEM)
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "10"

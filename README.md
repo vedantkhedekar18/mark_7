@@ -66,7 +66,7 @@ Both options need a hosted MySQL database first, for example an Aiven free MySQL
 
 Environment variables: `DATABASE_URL` (the Service URI), `DB_SSL=true`, `DB_CA_CERT` (the CA certificate PEM text), and optionally `DB_POOL_SIZE` (default 20; use 5 on Vercel).
 
-**Vercel:** import the repo, set **Framework Preset: Other**, add the environment variables, then deploy. `vercel.json` routes every path to `api/server.ts`, which runs the whole app as one Vercel Function. Socket.IO runs on Vercel's WebSocket support (beta), using the WebSocket transport only.
+**Vercel:** import the repo, set **Framework Preset: Other**, add the environment variables, then deploy. `vercel.json` routes every path to `api/server.ts` (the source files are deliberately not named `app.ts`, `index.ts` or `server.ts`, so Vercel does not auto-detect them as a separate Express app), which runs the whole app as one Vercel Function. Socket.IO runs on Vercel's WebSocket support (beta), using the WebSocket transport only.
 
 **Render:** **New → Blueprint**, pick this repo (it reads `render.yaml`), and fill in the variables.
 

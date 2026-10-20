@@ -4,7 +4,7 @@ import path from "node:path";
 import express from "express";
 import type { Pool } from "mysql2/promise";
 import { Server as SocketServer } from "socket.io";
-import { createApp } from "./app";
+import { createApp } from "./routes";
 import { createPool, migrate } from "./db";
 import { ensureFundingAccount } from "./ledger";
 import { startOutboxWorker } from "./outbox";

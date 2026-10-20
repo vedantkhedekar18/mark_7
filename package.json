@@ -2,14 +2,14 @@
   "name": "transfer-ledger",
   "version": "0.1.0",
   "description": "Double-entry money-transfer ledger with idempotency keys, row locking and reconciliation (Node.js, TypeScript, MySQL)",
-  "main": "dist/server.js",
+  "main": "dist/main.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts",
+    "start": "node dist/main.js",
+    "dev": "tsx watch src/main.ts",
     "test": "vitest run",
     "bench": "tsx scripts/bench.ts",
     "typecheck": "tsc --noEmit"

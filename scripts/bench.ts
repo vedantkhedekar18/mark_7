@@ -8,7 +8,7 @@ import http from "node:http";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import { createApp } from "../src/app";
+import { createApp } from "../src/routes";
 import { createPool, migrate } from "../src/db";
 import { ensureFundingAccount, reconcile, stats } from "../src/ledger";
 

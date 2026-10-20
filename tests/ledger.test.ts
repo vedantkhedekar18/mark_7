@@ -3,7 +3,7 @@ import request from "supertest";
 import fc from "fast-check";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Pool } from "mysql2/promise";
-import { createApp } from "../src/app";
+import { createApp } from "../src/routes";
 import { createPool, migrate } from "../src/db";
 import { ensureFundingAccount, reconcile } from "../src/ledger";
 

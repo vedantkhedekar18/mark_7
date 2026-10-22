@@ -12,6 +12,7 @@
     "dev": "tsx watch src/main.ts",
     "test": "vitest run",
     "bench": "tsx scripts/bench.ts",
+    "test:matrix": "tsx scripts/test-matrix.ts",
     "typecheck": "tsc --noEmit"
   },
   "license": "MIT",

@@ -1,0 +1,49 @@
+# Test databases for running the suite against each engine the ledger claims to support.
+# Versions are pinned exactly: isolation and locking behavior changes between patch releases.
+# Data lives in tmpfs, so every `docker compose up` starts from an empty server.
+#   docker compose up -d --wait
+#   npm run test:matrix
+x-db-env: &db-env
+  MYSQL_ROOT_PASSWORD: root
+  MYSQL_DATABASE: ledger_test
+  MYSQL_USER: ledger
+  MYSQL_PASSWORD: ledgerpass
+  MARIADB_ROOT_PASSWORD: root
+  MARIADB_DATABASE: ledger_test
+  MARIADB_USER: ledger
+  MARIADB_PASSWORD: ledgerpass
+
+services:
+  mysql80:
+    image: mysql:8.0.46
+    environment: *db-env
+    ports: ["127.0.0.1:3307:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  mariadb1011:
+    image: mariadb:10.11.19
+    environment: *db-env
+    ports: ["127.0.0.1:3308:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  # 11.8 turns innodb_snapshot_isolation ON by default (MDEV-35124); 10.11 leaves it OFF.
+  mariadb118:
+    image: mariadb:11.8.9
+    environment: *db-env
+    ports: ["127.0.0.1:3309:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
